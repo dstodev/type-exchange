@@ -1,0 +1,29 @@
+version: '3.9' # https://docs.docker.com/compose/compose-file/
+
+services:
+  build:
+    build:
+      context: .
+      dockerfile: build.dockerfile
+    volumes:
+      - ..:/project
+      - ../build/compose-build:/home/build
+      - ../build/_dependency-cache:/home/_dependency-cache
+    entrypoint: sh /project/script/run-tests.sh
+    command: /home/build
+
+  build-clang:
+    extends:
+      service: build
+    environment:
+      CC: /usr/bin/clang
+      CXX: /usr/bin/clang++
+    volumes:
+      - ../build/compose-build-clang:/home/build-clang
+    command: /home/build-clang
+
+  shell:
+    extends:
+      service: build
+    entrypoint: sh -i
+    profiles: [ hidden ]

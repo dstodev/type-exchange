@@ -1,0 +1,7 @@
+.DS_Store
+venv/
+
+.fleet/
+.cache/
+
+*.log
