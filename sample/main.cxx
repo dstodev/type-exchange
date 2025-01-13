@@ -9,7 +9,14 @@
 #include <cli.hxx>
 #include <project.hxx>
 
+#include <type-exchange.hxx>
+
 using namespace project;
+
+void print_int(int value)
+{
+	std::cout << value << std::endl;
+}
 
 namespace {
 void set_log_level(std::optional<std::string> const& cli_level = std::nullopt);
@@ -26,6 +33,27 @@ int main(int const argc, char const* argv[])
 #endif
 
 	std::cout << "Welcome!" << std::endl;
+
+	TypeExchange exchange;
+
+	exchange.subscribe<int>([](int const& message) { std::cout << "Received int: " << message << std::endl; });
+	exchange.subscribe<std::string>(
+	    [](std::string const& message) { std::cout << "Received string: " << message << std::endl; });
+
+	exchange.subscribe<int>(print_int);
+
+	exchange.publish(42);
+	exchange.publish(std::string {"Hello, World!"});
+
+	char test = 'a';
+
+	exchange.subscribe<char>([&test](char const& message) { test = message; });
+
+	std::cout << test << std::endl;
+
+	exchange.publish('b');
+
+	std::cout << test << std::endl;
 
 	return 0;
 }

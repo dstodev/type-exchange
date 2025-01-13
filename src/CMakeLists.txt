@@ -4,6 +4,7 @@ configure_file("version.h.in" "version.h")
 
 add_library(${target}
 	project.cxx
+	type-exchange.hxx
 	${CMAKE_CURRENT_BINARY_DIR}/version.h
 )
 
@@ -33,6 +34,7 @@ target_compile_options(${target}
 set(header_files_to_package
 	"${CMAKE_CURRENT_BINARY_DIR}/version.h"
 	"${CMAKE_CURRENT_LIST_DIR}/project.hxx"
+	"${CMAKE_CURRENT_LIST_DIR}/type-exchange.hxx"
 	"${CMAKE_CURRENT_LIST_DIR}/utility/log.hxx"
 )
 
