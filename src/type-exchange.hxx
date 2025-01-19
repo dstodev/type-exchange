@@ -12,13 +12,13 @@
 
 namespace project {
 
+template <typename MessageType>
+using MessageCallback = std::function<void(MessageType const&)>;
+
 namespace detail {
 
 template <typename MessageType>
 using MessageQueue = std::queue<MessageType>;
-
-template <typename MessageType>
-using MessageCallback = std::function<void(MessageType const&)>;
 
 template <typename MessageType>
 using SubscriberList = std::vector<MessageCallback<MessageType>>;
@@ -74,18 +74,6 @@ private:
 };
 
 template <typename MessageType>
-auto EventHandlerImpl<MessageType>::subscriber_list_ptr() -> void*
-{
-	return &_callbacks;
-}
-
-template <typename MessageType>
-auto EventHandlerImpl<MessageType>::message_queue_ptr() -> void*
-{
-	return &_messages;
-}
-
-template <typename MessageType>
 void EventHandlerImpl<MessageType>::process_messages()
 {
 	while (!_messages.empty()) {
@@ -99,6 +87,18 @@ void EventHandlerImpl<MessageType>::process_messages()
 	}
 }
 
+template <typename MessageType>
+auto EventHandlerImpl<MessageType>::subscriber_list_ptr() -> void*
+{
+	return &_callbacks;
+}
+
+template <typename MessageType>
+auto EventHandlerImpl<MessageType>::message_queue_ptr() -> void*
+{
+	return &_messages;
+}
+
 }  // namespace detail
 
 /** @Brief Facilitates arbitrary-type message transfer
@@ -109,8 +109,8 @@ void EventHandlerImpl<MessageType>::process_messages()
 class TypeExchange
 {
 public:
-	template <typename MessageType, typename Callback>
-	void subscribe(Callback callback);
+	template <typename MessageType>
+	void subscribe(MessageCallback<MessageType> callback);
 
 	template <typename MessageType>
 	void publish(MessageType message);
@@ -126,12 +126,9 @@ private:
 	TypeHandlers _type_handlers;
 };
 
-template <typename MessageType, typename Callback>
-void TypeExchange::subscribe(Callback callback)
+template <typename MessageType>
+void TypeExchange::subscribe(MessageCallback<MessageType> callback)
 {
-	static_assert(std::is_invocable_v<Callback, MessageType const&>,
-	              "Callback must be callable with a MessageType const& argument.");
-
 	auto& handler = get_handler<MessageType>();
 	auto& subscribers = handler.template subscriber_list_as_message_type<MessageType>();
 

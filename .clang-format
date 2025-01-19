@@ -1,5 +1,5 @@
-# 2022 Daniel Stotts
-# Version ~54
+# Daniel's C++ style
+# Iteration 1
 ---
 BasedOnStyle: LLVM
 ColumnLimit: 120
@@ -35,6 +35,7 @@ AlignTrailingComments: false
 
 # Penalties
 PenaltyBreakAssignment: 500
+PenaltyBreakOpenParenthesis: 500
 PenaltyReturnTypeOnItsOwnLine: 500
 
 # Other

@@ -15,7 +15,7 @@ using namespace project;
 
 void print_int(int value)
 {
-	std::cout << value << std::endl;
+	std::cout << "print_int(): " << value << std::endl;
 }
 
 struct NonCopyable
@@ -27,6 +27,23 @@ struct NonCopyable
 	NonCopyable& operator=(NonCopyable&&) = default;
 
 	NonCopyable() = default;
+};
+
+struct Receiver
+{
+	int _value {};
+	std::string _str {};
+
+	void receive(int value)
+	{
+		_value += value;
+		std::cout << "Receiver int total: " << _value << std::endl;
+	}
+	void receive(std::string const& str)
+	{
+		_str += str;
+		std::cout << "Receiver string total: " << _str << std::endl;
+	}
 };
 
 namespace {
@@ -47,15 +64,17 @@ int main(int const argc, char const* argv[])
 
 	TypeExchange exchange;
 
-	exchange.subscribe<int>([](int const& message) { std::cout << "Received int: " << message << std::endl; });
+	exchange.subscribe<int>([](int const& message) { std::cout << "int lambda: " << message << std::endl; });
 	exchange.subscribe<int>(print_int);
 
-	exchange.subscribe<std::string>(
-	    [](std::string const& message) { std::cout << "Received string: " << message << std::endl; });
+	exchange.subscribe<std::string>([](std::string const& message) {
+		std::cout << "Received string: " << message << std::endl;
+	});
 
 	exchange.publish(1);
 	exchange.publish(2);
-	exchange.publish(std::string {"Hello, World!"});
+	exchange.publish(std::string {"Hello, "});
+	exchange.publish(std::string {"world!"});
 
 	char test = 'a';
 
@@ -68,8 +87,19 @@ int main(int const argc, char const* argv[])
 
 	exchange.publish(std::move(nc));
 
-	exchange.subscribe<NonCopyable>(
-	    [](NonCopyable const& message) { std::cout << "Received NonCopyable!" << std::endl; });
+	exchange.subscribe<NonCopyable>([](NonCopyable const& message) {
+		std::cout << "Received NonCopyable!" << std::endl;
+	});
+
+	Receiver receiver;
+
+	exchange.subscribe<int>(std::bind(static_cast<void (Receiver::*)(int)>(&Receiver::receive),
+	                                  &receiver,
+	                                  std::placeholders::_1));
+
+	exchange.subscribe<std::string>(std::bind(static_cast<void (Receiver::*)(std::string const&)>(&Receiver::receive),
+	                                          &receiver,
+	                                          std::placeholders::_1));
 
 	std::cout << "-- Processing..." << std::endl;
 	exchange.process_messages();
