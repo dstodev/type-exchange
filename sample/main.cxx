@@ -18,6 +18,14 @@ void print_int(int value)
 	std::cout << value << std::endl;
 }
 
+struct NonCopyable
+{
+	NonCopyable(NonCopyable const&) = delete;
+	NonCopyable& operator=(NonCopyable const&) = delete;
+
+	NonCopyable() = default;
+};
+
 namespace {
 void set_log_level(std::optional<std::string> const& cli_level = std::nullopt);
 auto get_env_var(char const* name) -> std::optional<std::string>;
@@ -42,7 +50,7 @@ int main(int const argc, char const* argv[])
 
 	exchange.subscribe<int>(print_int);
 
-	exchange.publish(42);
+	exchange.publish(1);
 	exchange.publish(std::string {"Hello, World!"});
 
 	char test = 'a';
@@ -54,6 +62,13 @@ int main(int const argc, char const* argv[])
 	exchange.publish('b');
 
 	std::cout << test << std::endl;
+
+	exchange.subscribe<NonCopyable>(
+	    [](NonCopyable const& message) { std::cout << "Received NonCopyable!" << std::endl; });
+
+	NonCopyable nc;
+
+	exchange.publish(nc);
 
 	return 0;
 }

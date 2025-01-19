@@ -11,29 +11,29 @@ namespace project {
 
 namespace detail {
 
-struct MessageCallWrapper
+struct Subscriber
 {
-	virtual ~MessageCallWrapper() = default;
-	virtual void call(void const* message) = 0;
+	virtual ~Subscriber() = default;
+	virtual void notify(void const* message) = 0;
 };
 
 template <typename MessageType, typename Callback>
-struct MessageCallWrapperImpl : MessageCallWrapper
+struct SubscriberImpl : Subscriber
 {
-	explicit MessageCallWrapperImpl(Callback&& callback);
+	explicit SubscriberImpl(Callback&& callback);
 
-	void call(void const* message) override;
+	void notify(void const* message) override;
 
 	Callback _callback;
 };
 
 template <typename MessageType, typename Callback>
-MessageCallWrapperImpl<MessageType, Callback>::MessageCallWrapperImpl(Callback&& callback)
+SubscriberImpl<MessageType, Callback>::SubscriberImpl(Callback&& callback)
     : _callback {std::forward<Callback>(callback)}
 {}
 
 template <typename MessageType, typename Callback>
-void MessageCallWrapperImpl<MessageType, Callback>::call(void const* message)
+void SubscriberImpl<MessageType, Callback>::notify(void const* message)
 {
 	_callback(*static_cast<MessageType const*>(message));
 }
@@ -42,10 +42,8 @@ void MessageCallWrapperImpl<MessageType, Callback>::call(void const* message)
 
 /** @Brief Facilitates arbitrary-type message transfer
 
-    Allows subscribing to message types and publishing messages of those types:
-
-      subscribe<MessageType>([](MessageType const& message) { ... });
-      publish<MessageType>(message);
+    Allows subscribing to message types and publishing messages of those types
+    to all subscribers.
  */
 class TypeExchange
 {
@@ -57,9 +55,9 @@ public:
 	void publish(MessageType const& message) const;
 
 private:
-	using CallbackMap = std::unordered_map<std::type_index, std::vector<std::unique_ptr<detail::MessageCallWrapper>>>;
+	using TypeSubscribers = std::unordered_map<std::type_index, std::vector<std::unique_ptr<detail::Subscriber>>>;
 
-	CallbackMap _subscribers;
+	TypeSubscribers _type_subscribers;
 };
 
 template <typename MessageType, typename Callback>
@@ -68,19 +66,19 @@ void TypeExchange::subscribe(Callback&& callback)
 	static_assert(std::is_invocable_v<Callback, MessageType const&>,
 	              "Callback must be callable with a MessageType const& argument.");
 
-	auto& callbacks = _subscribers[typeid(MessageType)];
+	auto& subscribers = _type_subscribers[typeid(MessageType)];
 
-	callbacks.push_back(std::make_unique<detail::MessageCallWrapperImpl<MessageType, std::decay_t<Callback>>>(
-	    std::forward<Callback>(callback)));
+	subscribers.emplace_back(
+	    std::make_unique<detail::SubscriberImpl<MessageType, Callback>>(std::forward<Callback>(callback)));
 }
 
 template <typename MessageType>
 void TypeExchange::publish(MessageType const& message) const
 {
-	auto const& callbacks = _subscribers.at(typeid(MessageType));
+	auto const& subscribers = _type_subscribers.at(typeid(MessageType));
 
-	for (auto const& callback : callbacks) {
-		callback->call(&message);
+	for (auto const& subscriber : subscribers) {
+		subscriber->notify(&message);
 	}
 }
 
