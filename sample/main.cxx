@@ -23,6 +23,9 @@ struct NonCopyable
 	NonCopyable(NonCopyable const&) = delete;
 	NonCopyable& operator=(NonCopyable const&) = delete;
 
+	NonCopyable(NonCopyable&&) = default;
+	NonCopyable& operator=(NonCopyable&&) = default;
+
 	NonCopyable() = default;
 };
 
@@ -40,35 +43,39 @@ int main(int const argc, char const* argv[])
 	log::print_enabled_levels();
 #endif
 
-	std::cout << "Welcome!" << std::endl;
+	std::cout << "Welcome!\n" << std::endl;
 
 	TypeExchange exchange;
 
 	exchange.subscribe<int>([](int const& message) { std::cout << "Received int: " << message << std::endl; });
+	exchange.subscribe<int>(print_int);
+
 	exchange.subscribe<std::string>(
 	    [](std::string const& message) { std::cout << "Received string: " << message << std::endl; });
 
-	exchange.subscribe<int>(print_int);
-
 	exchange.publish(1);
+	exchange.publish(2);
 	exchange.publish(std::string {"Hello, World!"});
 
 	char test = 'a';
 
 	exchange.subscribe<char>([&test](char const& message) { test = message; });
-
-	std::cout << test << std::endl;
-
 	exchange.publish('b');
 
-	std::cout << test << std::endl;
+	std::cout << "Var before processing: " << test << std::endl;
+
+	NonCopyable nc;
+
+	exchange.publish(std::move(nc));
 
 	exchange.subscribe<NonCopyable>(
 	    [](NonCopyable const& message) { std::cout << "Received NonCopyable!" << std::endl; });
 
-	NonCopyable nc;
+	std::cout << "-- Processing..." << std::endl;
+	exchange.process_messages();
+	std::cout << "-- Done processing." << std::endl;
 
-	exchange.publish(nc);
+	std::cout << "Var after processing: " << test << '\n' << std::endl;
 
 	return 0;
 }
