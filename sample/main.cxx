@@ -42,7 +42,7 @@ struct Receiver
 	void receive(std::string const& str)
 	{
 		_str += str;
-		std::cout << "Receiver string total: " << _str << std::endl;
+		std::cout << "Receiver string total: \"" << _str << '"' << std::endl;
 	}
 };
 
@@ -68,7 +68,7 @@ int main(int const argc, char const* argv[])
 	exchange.subscribe<int>(print_int);
 
 	exchange.subscribe<std::string>([](std::string const& message) {
-		std::cout << "Received string: " << message << std::endl;
+		std::cout << "string lambda: " << message << std::endl;
 	});
 
 	exchange.publish(1);
@@ -93,13 +93,8 @@ int main(int const argc, char const* argv[])
 
 	Receiver receiver;
 
-	exchange.subscribe<int>(std::bind(static_cast<void (Receiver::*)(int)>(&Receiver::receive),
-	                                  &receiver,
-	                                  std::placeholders::_1));
-
-	exchange.subscribe<std::string>(std::bind(static_cast<void (Receiver::*)(std::string const&)>(&Receiver::receive),
-	                                          &receiver,
-	                                          std::placeholders::_1));
+	exchange.subscribe<int>([&receiver](int const& message) { receiver.receive(message); });
+	exchange.subscribe<std::string>([&receiver](std::string const& message) { receiver.receive(message); });
 
 	std::cout << "-- Processing..." << std::endl;
 	exchange.process_messages();
