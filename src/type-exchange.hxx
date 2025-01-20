@@ -148,7 +148,12 @@ void TypeExchange::publish(MessageType message)
 	auto& handler = get_handler<MessageType>();
 	auto& messages = handler.template message_queue_as_message_type<MessageType>();
 
-	messages.push(std::move(message));
+	if constexpr (std::is_move_constructible_v<MessageType>) {
+		messages.emplace(std::move(message));
+	}
+	else {
+		messages.push(message);
+	}
 }
 
 template <typename MessageType>

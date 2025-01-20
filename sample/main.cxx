@@ -22,11 +22,18 @@ struct NonCopyable
 {
 	NonCopyable(NonCopyable const&) = delete;
 	NonCopyable& operator=(NonCopyable const&) = delete;
-
 	NonCopyable(NonCopyable&&) = default;
 	NonCopyable& operator=(NonCopyable&&) = default;
-
 	NonCopyable() = default;
+};
+
+struct NonMoveable
+{
+	NonMoveable(NonMoveable const&) = default;
+	NonMoveable& operator=(NonMoveable const&) = default;
+	NonMoveable(NonMoveable&&) = delete;
+	NonMoveable& operator=(NonMoveable&&) = delete;
+	NonMoveable() = default;
 };
 
 struct Receiver
@@ -87,6 +94,14 @@ int main(int const argc, char const* argv[])
 
 	exchange.subscribe<NonCopyable>([](NonCopyable const& message) {
 		std::cout << "Received NonCopyable!" << std::endl;
+	});
+
+	NonMoveable nm;
+
+	exchange.publish(nm);
+
+	exchange.subscribe<NonMoveable>([](NonMoveable const& message) {
+		std::cout << "Received NonMoveable!" << std::endl;
 	});
 
 	Receiver receiver;
