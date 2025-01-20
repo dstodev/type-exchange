@@ -83,11 +83,6 @@ int main(int const argc, char const* argv[])
 	exchange.publish(std::string {"Hello, "});
 	exchange.publish(std::string {"world!"});
 
-	char test = 'a';
-
-	exchange.subscribe<char>([&test](char const& message) { test = message; });
-	exchange.publish('b');
-
 	NonCopyable nc;
 
 	exchange.publish(std::move(nc));
@@ -108,6 +103,11 @@ int main(int const argc, char const* argv[])
 
 	exchange.subscribe<int>([&receiver](int const& message) { receiver.receive(message); });
 	exchange.subscribe<std::string>([&receiver](std::string const& message) { receiver.receive(message); });
+
+	char test = 'a';
+
+	exchange.subscribe<char>([&test](char const& message) { test = message; });
+	exchange.publish('b');
 
 	std::cout << "Var before processing: " << test << std::endl;
 

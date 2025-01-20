@@ -112,7 +112,7 @@ public:
 	void process_messages();
 
 	template <typename MessageType>
-	void subscribe(MessageCallback<MessageType> callback);
+	void subscribe(MessageCallback<MessageType>&& callback);
 
 	template <typename MessageType>
 	void publish(MessageType message);
@@ -134,7 +134,7 @@ inline void TypeExchange::process_messages()
 }
 
 template <typename MessageType>
-void TypeExchange::subscribe(MessageCallback<MessageType> callback)
+void TypeExchange::subscribe(MessageCallback<MessageType>&& callback)
 {
 	auto& handler = get_handler<MessageType>();
 	auto& subscribers = handler.template subscriber_list_as_message_type<MessageType>();
