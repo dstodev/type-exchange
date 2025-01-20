@@ -81,8 +81,6 @@ int main(int const argc, char const* argv[])
 	exchange.subscribe<char>([&test](char const& message) { test = message; });
 	exchange.publish('b');
 
-	std::cout << "Var before processing: " << test << std::endl;
-
 	NonCopyable nc;
 
 	exchange.publish(std::move(nc));
@@ -95,6 +93,8 @@ int main(int const argc, char const* argv[])
 
 	exchange.subscribe<int>([&receiver](int const& message) { receiver.receive(message); });
 	exchange.subscribe<std::string>([&receiver](std::string const& message) { receiver.receive(message); });
+
+	std::cout << "Var before processing: " << test << std::endl;
 
 	std::cout << "-- Processing..." << std::endl;
 	exchange.process_messages();

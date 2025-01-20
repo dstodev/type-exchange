@@ -28,13 +28,13 @@ class EventHandler
 public:
 	virtual ~EventHandler() = 0;
 
+	virtual void process_messages() = 0;
+
 	template <typename MessageType>
 	auto subscriber_list_as_message_type() -> SubscriberList<MessageType>&;
 
 	template <typename MessageType>
 	auto message_queue_as_message_type() -> MessageQueue<MessageType>&;
-
-	virtual void process_messages() = 0;
 
 private:
 	virtual auto subscriber_list_ptr() -> void* = 0;
@@ -69,7 +69,7 @@ private:
 	auto subscriber_list_ptr() -> void* override;
 	auto message_queue_ptr() -> void* override;
 
-	SubscriberList<MessageType> _callbacks;
+	SubscriberList<MessageType> _subscribers;
 	MessageQueue<MessageType> _messages;
 };
 
@@ -79,7 +79,7 @@ void EventHandlerImpl<MessageType>::process_messages()
 	while (!_messages.empty()) {
 		auto const& message = _messages.front();
 
-		for (auto const& callback : _callbacks) {
+		for (auto const& callback : _subscribers) {
 			callback(message);
 		}
 
@@ -90,7 +90,7 @@ void EventHandlerImpl<MessageType>::process_messages()
 template <typename MessageType>
 auto EventHandlerImpl<MessageType>::subscriber_list_ptr() -> void*
 {
-	return &_callbacks;
+	return &_subscribers;
 }
 
 template <typename MessageType>
@@ -109,13 +109,13 @@ auto EventHandlerImpl<MessageType>::message_queue_ptr() -> void*
 class TypeExchange
 {
 public:
+	void process_messages();
+
 	template <typename MessageType>
 	void subscribe(MessageCallback<MessageType> callback);
 
 	template <typename MessageType>
 	void publish(MessageType message);
-
-	void process_messages();
 
 private:
 	template <typename MessageType>
@@ -125,6 +125,13 @@ private:
 
 	TypeHandlers _type_handlers;
 };
+
+inline void TypeExchange::process_messages()
+{
+	for (auto& [type, handler] : _type_handlers) {
+		handler->process_messages();
+	}
+}
 
 template <typename MessageType>
 void TypeExchange::subscribe(MessageCallback<MessageType> callback)
@@ -139,9 +146,9 @@ template <typename MessageType>
 void TypeExchange::publish(MessageType message)
 {
 	auto& handler = get_handler<MessageType>();
-	auto& queue = handler.template message_queue_as_message_type<MessageType>();
+	auto& messages = handler.template message_queue_as_message_type<MessageType>();
 
-	queue.push(std::move(message));
+	messages.push(std::move(message));
 }
 
 template <typename MessageType>
@@ -154,13 +161,6 @@ auto TypeExchange::get_handler() -> detail::EventHandlerImpl<MessageType>&
 	}
 
 	return static_cast<detail::EventHandlerImpl<MessageType>&>(*handler);
-}
-
-inline void TypeExchange::process_messages()
-{
-	for (auto& [type, handler] : _type_handlers) {
-		handler->process_messages();
-	}
 }
 
 }  // namespace project
