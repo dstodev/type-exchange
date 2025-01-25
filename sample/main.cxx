@@ -93,7 +93,7 @@ int main(int const argc, char const* argv[])
 
 	NonMoveable nm;
 
-	exchange.publish(nm);
+	exchange.publish(NonMoveable(nm));  // publish takes ownership: requires explicit copy
 
 	exchange.subscribe<NonMoveable>([](NonMoveable const& message) {
 		std::cout << "Received NonMoveable!" << std::endl;

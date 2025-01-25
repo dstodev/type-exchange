@@ -4,6 +4,7 @@ add_google_executable(${target}
 	SOURCES
 		log.cxx
 		project.cxx
+		type-exchange.cxx
 
 	LIBRARIES
 		project

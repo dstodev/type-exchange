@@ -115,7 +115,7 @@ public:
 	void subscribe(MessageCallback<MessageType>&& callback);
 
 	template <typename MessageType>
-	void publish(MessageType message);
+	auto publish(MessageType&& message) -> std::enable_if_t<std::is_rvalue_reference_v<MessageType&&>, void>;
 
 private:
 	template <typename MessageType>
@@ -142,29 +142,32 @@ void TypeExchange::subscribe(MessageCallback<MessageType>&& callback)
 	subscribers.push_back(std::move(callback));
 }
 
+// Sice MessageType is a template parameter, the MessageType&& function parameter is a forwarding reference.
+// A forwarding reference can accept either lvalue or rvalue reference.
+// std::enable_if restricts the function to only accept rvalue references.
 template <typename MessageType>
-void TypeExchange::publish(MessageType message)
+auto TypeExchange::publish(MessageType&& message) -> std::enable_if_t<std::is_rvalue_reference_v<MessageType&&>, void>
 {
 	auto& handler = get_handler<MessageType>();
 	auto& messages = handler.template message_queue_as_message_type<MessageType>();
 
-	if constexpr (std::is_move_constructible_v<MessageType>) {
-		messages.emplace(std::move(message));
-	}
-	else {
-		messages.push(message);
-	}
+	messages.push(
+	    static_cast<
+	        std::conditional_t<std::is_move_constructible_v<MessageType>, MessageType&&, MessageType const&>>(message));
 }
 
 template <typename MessageType>
 auto TypeExchange::get_handler() -> detail::EventHandlerImpl<MessageType>&
 {
+	// operator[] creates a new handler for new indices
 	auto& handler = _type_handlers[typeid(MessageType)];
 
+	// If a handler was just created, the instance pointer is still null
 	if (!handler) {
 		handler = std::make_unique<detail::EventHandlerImpl<MessageType>>();
 	}
 
+	// Return a reference to the handler instance
 	return static_cast<detail::EventHandlerImpl<MessageType>&>(*handler);
 }
 
