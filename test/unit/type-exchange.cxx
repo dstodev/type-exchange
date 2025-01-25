@@ -164,6 +164,21 @@ TEST(TypeExchange, non_moveable_type)
 	exchange.publish(NonMoveable(nm));
 }
 
+TEST(TypeExchange, publish_then_subscribe)
+{
+	TypeExchange exchange;
+
+	int value {0};
+
+	exchange.publish(1);
+
+	exchange.subscribe<int>([&value](int const& message) { value = message; });
+
+	exchange.process_messages();
+
+	ASSERT_EQ(1, value);
+}
+
 TEST(TypeExchange, receiver)
 {
 	TypeExchange exchange;
