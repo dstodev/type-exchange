@@ -78,14 +78,19 @@ private:
 template <typename M>
 void EventHandlerImpl<M>::process_messages()
 {
-	while (!_messages.empty()) {
-		auto const& message = *_messages.front();
+	MessageQueue<M> messages;
 
-		for (auto const& callback : _subscribers) {
-			callback(message);
+	using std::swap;
+	swap(messages, _messages);
+
+	while (!messages.empty()) {
+		auto const& message = *messages.front();
+
+		for (auto const& subscriber : _subscribers) {
+			subscriber(message);
 		}
 
-		_messages.pop();
+		messages.pop();
 	}
 }
 

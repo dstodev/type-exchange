@@ -198,3 +198,39 @@ TEST(TypeExchange, receiver)
 	ASSERT_EQ(3, receiver._value);
 	ASSERT_EQ("Hello, world!", receiver._str);
 }
+
+TEST(TypeExchange, process_multiple)
+{
+	TypeExchange exchange;
+
+	Receiver receiver;
+
+	exchange.subscribe<int>([&receiver](int const& message) { receiver.receive(message); });
+	exchange.subscribe<std::string>([&receiver](std::string const& message) { receiver.receive(message); });
+
+	exchange.publish(1);
+	exchange.publish(2);
+	exchange.publish(std::string {"Hello, "});
+	exchange.publish(std::string {"world!"});
+
+	exchange.process_messages();
+
+	ASSERT_EQ(3, receiver._value);
+	ASSERT_EQ("Hello, world!", receiver._str);
+
+	// --- Call again
+	// Asserts message queues were emptied; no duplicating messages
+	exchange.process_messages();
+
+	ASSERT_EQ(3, receiver._value);
+	ASSERT_EQ("Hello, world!", receiver._str);
+
+	// --- Publish after processing
+	exchange.publish(3);
+	exchange.publish(std::string {"\nGoodbye!"});
+
+	exchange.process_messages();
+
+	ASSERT_EQ(6, receiver._value);
+	ASSERT_EQ("Hello, world!\nGoodbye!", receiver._str);
+}
