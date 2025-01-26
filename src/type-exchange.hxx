@@ -18,10 +18,10 @@ using MessageCallback = std::function<void(M const&)>;
 namespace detail {
 
 template <typename M>
-using MessageQueue = std::queue<std::unique_ptr<M>>;
+using SubscriberList = std::vector<MessageCallback<M>>;
 
 template <typename M>
-using SubscriberList = std::vector<MessageCallback<M>>;
+using MessageQueue = std::queue<std::unique_ptr<M>>;
 
 class EventHandler
 {
@@ -29,35 +29,9 @@ public:
 	virtual ~EventHandler() = 0;
 
 	virtual void process_messages() = 0;
-
-	template <typename M>
-	void subscribe(MessageCallback<M>&& callback);
-
-	template <typename M>
-	void publish(std::unique_ptr<M>&& message);
-
-private:
-	virtual auto subscriber_list_ptr() -> void* = 0;
-	virtual auto message_queue_ptr() -> void* = 0;
 };
 
 inline EventHandler::~EventHandler() = default;
-
-template <typename M>
-void EventHandler::subscribe(MessageCallback<M>&& callback)
-{
-	auto& list = *static_cast<SubscriberList<M>*>(subscriber_list_ptr());
-
-	list.push_back(std::move(callback));
-}
-
-template <typename M>
-void EventHandler::publish(std::unique_ptr<M>&& message)
-{
-	auto& queue = *static_cast<MessageQueue<M>*>(message_queue_ptr());
-
-	queue.push(std::move(message));
-}
 
 template <typename M>
 class EventHandlerImpl : public EventHandler
@@ -67,10 +41,10 @@ public:
 
 	void process_messages() override;
 
-private:
-	auto subscriber_list_ptr() -> void* override;
-	auto message_queue_ptr() -> void* override;
+	void subscribe(MessageCallback<M>&& callback);
+	void publish(std::unique_ptr<M>&& message);
 
+private:
 	SubscriberList<M> _subscribers;
 	MessageQueue<M> _messages;
 };
@@ -81,6 +55,7 @@ void EventHandlerImpl<M>::process_messages()
 	MessageQueue<M> messages;
 
 	using std::swap;
+
 	swap(messages, _messages);
 
 	while (!messages.empty()) {
@@ -95,15 +70,15 @@ void EventHandlerImpl<M>::process_messages()
 }
 
 template <typename M>
-auto EventHandlerImpl<M>::subscriber_list_ptr() -> void*
+void EventHandlerImpl<M>::subscribe(MessageCallback<M>&& callback)
 {
-	return &_subscribers;
+	_subscribers.push_back(std::move(callback));
 }
 
 template <typename M>
-auto EventHandlerImpl<M>::message_queue_ptr() -> void*
+void EventHandlerImpl<M>::publish(std::unique_ptr<M>&& message)
 {
-	return &_messages;
+	_messages.push(std::move(message));
 }
 
 }  // namespace detail
@@ -141,7 +116,7 @@ private:
 
 inline void TypeExchange::process_messages()
 {
-	for (auto& [type, handler] : _type_handlers) {
+	for (auto& [index, handler] : _type_handlers) {
 		handler->process_messages();
 	}
 }
